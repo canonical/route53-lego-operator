@@ -1,0 +1,29 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: route53-lego-operator
+
+display-name: Route53 Lego Operator
+
+description: |
+  LEGO operator implementing the provider side of the `tls-certificates`
+  interface to get signed certificates from the `Let's Encrypt` ACME server using route53 DNS.
+summary: |
+  LEGO operator implementing the provider side of the `tls-certificates`
+  interface to get signed certificates from the `Let's Encrypt` ACME server using route53 DNS.
+
+
+provides:
+  certificates:
+    interface: tls-certificates
+
+containers:
+  lego:
+    resource: lego-image
+
+resources:
+  lego-image:
+    type: oci-image
+    description: OCI image for lego (goacme/lego)
+    # Included for simplicity in integration tests
+    upstream-source: goacme/lego
