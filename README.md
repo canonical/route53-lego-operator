@@ -1,2 +1,3 @@
 # route53-lego-operator
-Charm that implements the acme-client library to get certificates with ACME protocol with AWS Route53 dns provider.
+
+This charm implements the acme-client library to retrieve certificates using the ACME protocol for route53 domains.
