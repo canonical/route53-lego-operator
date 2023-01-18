@@ -1,4 +1,4 @@
-# Copyright 2021 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 """# acme_client Library.
@@ -21,20 +21,20 @@ from charms.acme_client_operator.v0.acme_client import AcmeClient
 from ops.main import main
 class ExampleAcmeCharm(AcmeClient):
     def __init__(self, *args):
-        super().__init__(*args)
+        super().__init__(*args, plugin="namecheap")
         self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
+        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
-    @property
-    def _domain(self) -> Optional[str]:
-        return self.model.config.get("domain")
-
-    @property
-    def _email(self) -> Optional[str]:
-        return self.model.config.get("email")
-
-    @property
-    def _plugin(self) -> str:
-        return "namecheap"
+    def _on_config_changed(self, _):
+        try:
+            self.update_generic_acme_config(
+                email="example@email.com",
+                server=self._server
+            )
+        except ValueError as e:
+            # Handle exception, for example set status
+            return
+        self.unit.status = ActiveStatus()
 
     @property
     def _plugin_config(self):
@@ -50,8 +50,10 @@ provides:
 """
 import abc
 import logging
+import re
 from abc import abstractmethod
 from typing import Dict, List
+from urllib.parse import urlparse
 
 from charms.tls_certificates_interface.v1.tls_certificates import (  # type: ignore[import]
     CertificateCreationRequestEvent,
@@ -84,10 +86,9 @@ class AcmeClient(CharmBase):
 
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, *args):
+    def __init__(self, *args, plugin: str):
 
         super().__init__(*args)
-        self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
         self._csr_path = "/tmp/csr.pem"
         self._certs_path = "/tmp/.lego/certificates/"
         self._container_name = list(self.meta.containers.values())[0].name
@@ -99,8 +100,25 @@ class AcmeClient(CharmBase):
             self.tls_certificates.on.certificate_creation_request,
             self._on_certificate_creation_request,
         )
+        self._plugin = plugin
 
     def _on_acme_client_pebble_ready(self, event):
+        if not self._email:
+            self.unit.status = BlockedStatus("Email address was not provided.")
+            event.defer()
+            return
+        if not self._server:
+            self.unit.status = BlockedStatus("Server address was not provided.")
+            event.defer()
+            return
+        if not self._email_is_valid(self._email):
+            self.unit.status = BlockedStatus("Invalid email address.")
+            event.defer()
+            return
+        if not self._server_is_valid(self._server):
+            self.unit.status = BlockedStatus("Invalid server address.")
+            event.defer()
+            return
         self.unit.status = ActiveStatus()
 
     def _on_certificate_creation_request(self, event: CertificateCreationRequestEvent) -> None:
@@ -177,29 +195,6 @@ class AcmeClient(CharmBase):
 
     @property
     @abstractmethod
-    def _email(self) -> str:
-        """Account email address.
-
-        Implement this method in your charm to return
-        the email address of the account on the ACME server.
-
-        Returns:
-            str: email address.
-        """
-
-    @property
-    @abstractmethod
-    def _plugin(self) -> str:
-        """DNS provider used.
-
-        Implement this method in your charm to return your DNS provider.
-
-        Returns:
-            str: DNS provider.
-        """
-
-    @property
-    @abstractmethod
     def _plugin_config(self) -> Dict[str, str]:
         """Plugin specific additional configuration for the command.
 
@@ -209,3 +204,36 @@ class AcmeClient(CharmBase):
         Returns:
             dict[str, str]: Plugin specific configuration.
         """
+
+    def _email_is_valid(self, email: str):
+        """Validate the format of the email address."""
+        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+            return False
+        return True
+
+    def _server_is_valid(self, server: str):
+        """Validate the format of the ACME server address."""
+        urlparts = urlparse(server)
+        if not all([urlparts.scheme, urlparts.netloc]):
+            return False
+        return True
+
+    def validate_generic_acme_config(self):
+        """Update the generic ACME configuration.
+
+        This method updates and validates generic configuration for the ACME client charm.
+        """
+        if not self._email_is_valid(self._email):
+            raise ValueError("Invalid email address")
+        if not self._server_is_valid(self._server):
+            raise ValueError("Invalid server address")
+
+    @property
+    def _email(self) -> str:
+        """Email address to use for the ACME account."""
+        return self.model.config["email"]
+
+    @property
+    def _server(self) -> str:
+        """ACME server address."""
+        return self.model.config["server"]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2022 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 
@@ -24,7 +24,16 @@ async def test_build_and_deploy(ops_test):
     charm = await ops_test.build_charm(".")
     resources = {"lego-image": METADATA["resources"]["lego-image"]["upstream-source"]}
     await ops_test.model.deploy(
-        charm, resources=resources, application_name=APP_NAME, series="focal"
+        charm,
+        resources=resources,
+        application_name=APP_NAME,
+        series="focal",
+        config={
+            "email": "example@email.com",
+            "aws_access_key_id": "dummy key",
+            "aws_secret_access_key": "dummy access key",
+            "aws_region": "dummy region",
+        },
     )
 
     # issuing dummy update_status just to trigger an event
