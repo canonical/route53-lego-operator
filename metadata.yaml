@@ -24,6 +24,5 @@ containers:
 resources:
   lego-image:
     type: oci-image
-    description: OCI image for lego (goacme/lego)
-    # Included for simplicity in integration tests
-    upstream-source: goacme/lego
+    description: Distroless OCI image for lego built with rockcraft.
+    upstream-source: ghcr.io/canonical/lego:4.9.1
