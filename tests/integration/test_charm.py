@@ -33,6 +33,7 @@ async def test_build_and_deploy(ops_test):
             "aws_access_key_id": "dummy key",
             "aws_secret_access_key": "dummy access key",
             "aws_region": "dummy region",
+            "aws_hosted_zone_id": "dummy zone id"
         },
     )
 
