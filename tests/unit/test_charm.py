@@ -31,6 +31,7 @@ class TestCharm(unittest.TestCase):
                 "aws_access_key_id": "dummy key",
                 "aws_secret_access_key": "dummy access key",
                 "aws_region": "dummy region",
+                "aws_hosted_zone_id": "dummy zone id",
             }
         )
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
@@ -42,6 +43,7 @@ class TestCharm(unittest.TestCase):
                 "aws_access_key_id": "dummy key",
                 "aws_secret_access_key": "dummy access key",
                 "aws_region": "dummy region",
+                "aws_hosted_zone_id": "dummy zone id",
             }
         )
         self.assertEqual(self.harness.model.unit.status, BlockedStatus("Invalid email address"))
@@ -56,13 +58,18 @@ class TestCharm(unittest.TestCase):
         )
         self.assertEqual(
             self.harness.model.unit.status,
-            BlockedStatus("aws-access-key-id, aws-secret-access-key and aws-region must be set."),
+            BlockedStatus("aws-access-key-id, aws-secret-access-key must be set."),
         )
 
     def test_given_config_changed_when_access_key_not_provided_but_credentials_file_is_provided_then_status_is_active(
         self,
     ):
         self.harness.update_config(
-            {"email": "example@email.com", "aws_shared_credentials_file": "./aws-credentials"}
+            {
+                "email": "example@email.com",
+                "aws_shared_credentials_file": "./aws-credentials",
+                "aws_region": "dummy region",
+                "aws_hosted_zone_id": "dummy zone id",
+            }
         )
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())

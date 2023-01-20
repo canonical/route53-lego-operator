@@ -29,6 +29,11 @@ class Route53LegoOperatorCharm(AcmeClient):
         return self.model.config.get("aws_access_key_id")
 
     @property
+    def _aws_hosted_zone_id(self):
+        """Returns aws hosted zone id from config."""
+        return self.model.config.get("aws_hosted_zone_id")
+
+    @property
     def _aws_secret_access_key(self):
         """Returns aws secret access key from config."""
         return self.model.config.get("aws_secret_access_key")
@@ -66,13 +71,14 @@ class Route53LegoOperatorCharm(AcmeClient):
     @property
     def _plugin_config(self) -> Dict[str, str]:
         """Plugin specific additional configuration for the command."""
-        additional_config = {}
+        additional_config = {
+            "AWS_REGION": self._aws_region,
+            "AWS_HOSTED_ZONE_ID": self._aws_hosted_zone_id,
+        }
         if self._aws_access_key_id:
             additional_config["AWS_ACCESS_KEY_ID"] = self._aws_access_key_id
         if self._aws_secret_access_key:
             additional_config["AWS_SECRET_ACCESS_KEY"] = self._aws_secret_access_key
-        if self._aws_region:
-            additional_config["AWS_REGION"] = self._aws_region
         if self._aws_max_retries:
             additional_config["AWS_MAX_RETRIES"] = self._aws_max_retries
         if self._aws_polling_interval:
@@ -86,15 +92,17 @@ class Route53LegoOperatorCharm(AcmeClient):
     def _on_config_changed(self, _):
         """Handles config-changed events."""
         if not self._aws_shared_credentials_file:
-            if (
-                not self._aws_access_key_id
-                or not self._aws_secret_access_key
-                or not self._aws_region
-            ):
+            if not self._aws_access_key_id or not self._aws_secret_access_key:
                 self.unit.status = BlockedStatus(
-                    "aws-access-key-id, aws-secret-access-key and aws-region must be set."
+                    "aws-access-key-id, aws-secret-access-key must be set."
                 )
                 return
+        if not self._aws_region:
+            self.unit.status = BlockedStatus("aws-region must be set.")
+            return
+        if not self._aws_hosted_zone_id:
+            self.unit.status = BlockedStatus("aws-hosted-zone-id must be set.")
+            return
         try:
             self.validate_generic_acme_config()
         except ValueError as e:
