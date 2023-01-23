@@ -14,7 +14,7 @@ from ops.model import ActiveStatus, BlockedStatus
 logger = logging.getLogger(__name__)
 
 
-class Route53LegoOperatorCharm(AcmeClient):
+class Route53AcmeOperatorCharm(AcmeClient):
     """Main class that is instantiated every time an event occurs."""
 
     def __init__(self, *args):
@@ -106,4 +106,4 @@ class Route53LegoOperatorCharm(AcmeClient):
 
 
 if __name__ == "__main__":  # pragma: nocover
-    main(Route53LegoOperatorCharm)
+    main(Route53AcmeOperatorCharm)

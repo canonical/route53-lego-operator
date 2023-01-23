@@ -9,14 +9,14 @@ from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
-from charm import Route53LegoOperatorCharm
+from charm import Route53AcmeOperatorCharm
 
 testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
-        self.harness = Harness(Route53LegoOperatorCharm)
+        self.harness = Harness(Route53AcmeOperatorCharm)
         self.harness.set_leader(True)
         self.harness.set_can_connect("lego", True)
         self.addCleanup(self.harness.cleanup)
