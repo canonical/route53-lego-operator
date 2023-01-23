@@ -48,7 +48,7 @@ class TestCharm(unittest.TestCase):
         )
         self.assertEqual(self.harness.model.unit.status, BlockedStatus("Invalid email address"))
 
-    def test_given_config_changed_when_access_key_and_credentials_file_are_not_provided_then_status_is_blocked(
+    def test_given_config_changed_when_credentials_are_not_provided_then_status_is_blocked(
         self,
     ):
         self.harness.update_config(
@@ -60,16 +60,3 @@ class TestCharm(unittest.TestCase):
             self.harness.model.unit.status,
             BlockedStatus("aws-access-key-id, aws-secret-access-key must be set."),
         )
-
-    def test_given_config_changed_when_access_key_not_provided_but_credentials_file_is_provided_then_status_is_active(
-        self,
-    ):
-        self.harness.update_config(
-            {
-                "email": "example@email.com",
-                "aws_shared_credentials_file": "./aws-credentials",
-                "aws_region": "dummy region",
-                "aws_hosted_zone_id": "dummy zone id",
-            }
-        )
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())

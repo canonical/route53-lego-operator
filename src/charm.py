@@ -11,7 +11,6 @@ from charms.acme_client_operator.v0.acme_client import AcmeClient  # type: ignor
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
-# Log messages can be retrieved using juju debug-log
 logger = logging.getLogger(__name__)
 
 
@@ -24,17 +23,17 @@ class Route53LegoOperatorCharm(AcmeClient):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     @property
-    def _aws_access_key_id(self):
+    def _aws_access_key_id(self) -> str:
         """Returns aws access key from config."""
         return self.model.config.get("aws_access_key_id")
 
     @property
-    def _aws_hosted_zone_id(self):
+    def _aws_hosted_zone_id(self) -> str:
         """Returns aws hosted zone id from config."""
         return self.model.config.get("aws_hosted_zone_id")
 
     @property
-    def _aws_secret_access_key(self):
+    def _aws_secret_access_key(self) -> str:
         """Returns aws secret access key from config."""
         return self.model.config.get("aws_secret_access_key")
 
@@ -44,27 +43,22 @@ class Route53LegoOperatorCharm(AcmeClient):
         return self.model.config.get("aws_region")
 
     @property
-    def _aws_shared_credentials_file(self):
-        """Returns aws shared credentials file path from config."""
-        return self.model.config.get("aws_shared_credentials_file")
-
-    @property
-    def _aws_max_retries(self):
+    def _aws_max_retries(self) -> str:
         """Returns aws max retries from config."""
         return self.model.config.get("aws_max_retries")
 
     @property
-    def _aws_polling_interval(self):
+    def _aws_polling_interval(self) -> str:
         """Returns aws polling interval from config."""
         return self.model.config.get("aws_polling_interval")
 
     @property
-    def _aws_propagation_timeout(self):
+    def _aws_propagation_timeout(self) -> str:
         """Returns aws propagation timeout from config."""
         return self.model.config.get("aws_propagation_timeout")
 
     @property
-    def _aws_ttl(self):
+    def _aws_ttl(self) -> str:
         """Returns aws ttl from config."""
         return self.model.config.get("aws_ttl")
 
@@ -91,12 +85,11 @@ class Route53LegoOperatorCharm(AcmeClient):
 
     def _on_config_changed(self, _):
         """Handles config-changed events."""
-        if not self._aws_shared_credentials_file:
-            if not self._aws_access_key_id or not self._aws_secret_access_key:
-                self.unit.status = BlockedStatus(
-                    "aws-access-key-id, aws-secret-access-key must be set."
-                )
-                return
+        if not self._aws_access_key_id or not self._aws_secret_access_key:
+            self.unit.status = BlockedStatus(
+                "aws-access-key-id, aws-secret-access-key must be set."
+            )
+            return
         if not self._aws_region:
             self.unit.status = BlockedStatus("aws-region must be set.")
             return

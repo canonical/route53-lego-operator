@@ -2,11 +2,12 @@ name: CI
 
 on:
   push:
+    branches: ["main"]
 
 jobs:
   lint-report:
     name: Lint report
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -16,7 +17,7 @@ jobs:
 
   static-analysis:
     name: Static analysis
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -26,7 +27,7 @@ jobs:
 
   unit-tests-with-coverage:
     name: Unit tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -36,7 +37,7 @@ jobs:
 
   integration-tests:
     name: Integration tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - name: Install tox
@@ -52,13 +53,13 @@ jobs:
         if: ${{ github.event_name == 'push' }}
         with:
           name: tested-charm
-          path: .tox/**/route53-lego-operator_ubuntu-20.04-amd64.charm
+          path: .tox/**/route53-lego-operator_ubuntu-22.04-amd64.charm
           retention-days: 5
   
   publish-charm:
     name: Publish Charm
     needs: integration-tests
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-22.04
     if: ${{ github.event_name == 'push' }}
     steps:
       - name: Checkout
@@ -70,14 +71,14 @@ jobs:
         with:
           name: tested-charm
       - name: Move charm in current directory
-        run: find ./ -name route53-lego-operator_ubuntu-20.04-amd64.charm -exec mv -t ./ {} \;
+        run: find ./ -name route53-lego-operator_ubuntu-22.04-amd64.charm -exec mv -t ./ {} \;
       - name: Select Charmhub channel
         uses: canonical/charming-actions/channel@2.0.0-rc
         id: channel
       - name: Upload charm to Charmhub edge channel
         env:
           CHARMCRAFT_AUTH: "${{ secrets.CHARMHUB_TOKEN }}"
-        run: charmcraft upload ./route53-lego-operator_ubuntu-20.04-amd64.charm --release ${{ steps.channel.outputs.name }}
+        run: charmcraft upload ./route53-lego-operator_ubuntu-22.04-amd64.charm --release ${{ steps.channel.outputs.name }}
         id: upload
       - name: Chmod charmcraft logs
         if: steps.upload.conclusion == 'failure'

@@ -5,27 +5,26 @@
 AWS Route53 LEGO operator implements the provider side of the `tls-certificates-interface`
 to provide signed certificates from an ACME servers, using LEGO
 (https://go-acme.github.io/lego).
-It uses the  `acme_client` library to get the certificate from the ACME server.
 
 ## Usage
 
-Deploy route53-lego-operator`:
+`Deploy route53-lego-operator`:
 
-If you wish to change the default configuration, create a YAML configuration file with fields you would like to change:
+Create a YAML configuration file with the following fields:
 
 
 ```yaml
 route53-lego:
   email: <Account email address>
   aws_access_key_id: <AWS Access Key ID>
-   aws_secret_access_key: <AWS Secret Access Key>
-   aws_region: <AWS Region>
+  aws_secret_access_key: <AWS Secret Access Key>
+  aws_region: <AWS Region>
 ```
 `juju deploy route53-lego-operator --config <yaml config file>`
 
 Relate it to a `tls-certificates-requirer` charm:
 
-`juju relate route53-lego-operator:certificates tls-certificates-requirer`
+`juju relate route53-lego-operator:certificates  <tls-certificates-requirer>`
 
 ## Config
 
@@ -51,8 +50,7 @@ aws_ttl: <The TTL of the TXT record used for the DNS challenge>
 
 ## OCI Images
 
-This charm uses a [Lego](https://github.com/canonical/lego-rock) image that is built using Rockcraft.
-`ghcr.io/canonical/lego:4.9.1`
+-  [Lego Rock Image](https://github.com/canonical/lego-rock)
 
 ## Contributing
 

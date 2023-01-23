@@ -17,10 +17,6 @@ options:
   aws_region:
     type: string
     description: AWS Region
-  aws_shared_credentials_file:
-    type: string
-    default: ""
-    description: Path to the file that contains the AWS credentials
   aws_hosted_zone_id:
     type: string
     description: AWS Hosted Zone ID
