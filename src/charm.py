@@ -38,7 +38,7 @@ class Route53AcmeOperatorCharm(AcmeClient):
         return self.model.config.get("aws_secret_access_key")
 
     @property
-    def _aws_region(self):
+    def _aws_region(self) -> str:
         """Returns aws region from config."""
         return self.model.config.get("aws_region")
 
