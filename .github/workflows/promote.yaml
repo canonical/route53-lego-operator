@@ -14,7 +14,7 @@ on:
 jobs:
   promote:
     name: Promote Charm
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -37,6 +37,6 @@ jobs:
         with:
           credentials: ${{ secrets.CHARMHUB_TOKEN }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
-          destination-channel: latest/${{ env.promote-to }}
-          origin-channel: latest/${{ env.promote-from }}
-          charmcraft-channel: latest/stable
+          destination-channel: 20.04/${{ env.promote-to }}
+          origin-channel: 20.04/${{ env.promote-from }}
+          charmcraft-channel: 20.04/stable

@@ -24,7 +24,7 @@ route53-acme-operator:
 
 Relate it to a `tls-certificates-requirer` charm:
 
-`juju relate route53-acme-operator:certificates  <tls-certificates-requirer>`
+`juju relate route53-acme-operator:certificates <tls-certificates-requirer>`
 
 ## Config
 
