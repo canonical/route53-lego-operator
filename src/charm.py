@@ -17,6 +17,13 @@ logger = logging.getLogger(__name__)
 class Route53AcmeOperatorCharm(AcmeClient):
     """Main class that is instantiated every time an event occurs."""
 
+    REQUIRED_CONFIG = [
+        "AWS_REGION",
+        "AWS_HOSTED_ZONE_ID",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+    ]
+
     def __init__(self, *args):
         """Uses the acme_client library to manage events."""
         super().__init__(*args, plugin="route53")
@@ -83,16 +90,7 @@ class Route53AcmeOperatorCharm(AcmeClient):
 
     def _on_config_changed(self, _):
         """Handles config-changed events."""
-        if not self._aws_access_key_id or not self._aws_secret_access_key:
-            self.unit.status = BlockedStatus(
-                "aws-access-key-id, aws-secret-access-key must be set."
-            )
-            return
-        if not self._aws_region:
-            self.unit.status = BlockedStatus("aws-region must be set.")
-            return
-        if not self._aws_hosted_zone_id:
-            self.unit.status = BlockedStatus("aws-hosted-zone-id must be set.")
+        if not self._check_required_config():
             return
         try:
             self.validate_generic_acme_config()
@@ -101,6 +99,20 @@ class Route53AcmeOperatorCharm(AcmeClient):
             self.unit.status = BlockedStatus(str(e))
             return
         self.unit.status = ActiveStatus()
+
+    def _check_required_config(self) -> bool:
+        """Checks whether required config options are set.
+
+        Returns:
+            bool: True/False
+        """
+        if missing_config := [
+            option for option in self.REQUIRED_CONFIG if not self._plugin_config[option]
+        ]:
+            msg = f"The following config options must be set: {', '.join(missing_config)}"
+            self.unit.status = BlockedStatus(msg)
+            return False
+        return True
 
 
 if __name__ == "__main__":  # pragma: nocover

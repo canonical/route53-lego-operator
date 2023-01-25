@@ -27,10 +27,7 @@ class ExampleAcmeCharm(AcmeClient):
 
     def _on_config_changed(self, _):
         try:
-            self.update_generic_acme_config(
-                email="example@email.com",
-                server=self._server
-            )
+            self.validate_generic_acme_config()
         except ValueError as e:
             # Handle exception, for example set status
             return
