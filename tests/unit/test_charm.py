@@ -5,13 +5,10 @@
 
 import unittest
 
-from ops import testing
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 
 from charm import Route53AcmeOperatorCharm
-
-testing.SIMULATE_CAN_CONNECT = True
 
 
 class TestCharm(unittest.TestCase):
