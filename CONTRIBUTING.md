@@ -16,6 +16,7 @@ that can be used for linting and formatting code when you're preparing contribut
 
 ```shell
 tox -e lint          # code style
+tox -e static        # static analysis
 tox -e unit          # unit tests
 tox -e integration   # integration tests
 tox                  # runs 'lint' and 'unit' environments
