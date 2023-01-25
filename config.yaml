@@ -8,11 +8,9 @@ options:
     default: "https://acme-v02.api.letsencrypt.org/directory"
   aws_access_key_id:
     type: string
-    default: ""
     description: AWS Access Key ID
   aws_secret_access_key:
     type: string
-    default: ""
     description: AWS Secret Access Key
   aws_region:
     type: string

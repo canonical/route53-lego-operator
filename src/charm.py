@@ -68,11 +68,9 @@ class Route53AcmeOperatorCharm(AcmeClient):
         additional_config = {
             "AWS_REGION": self._aws_region,
             "AWS_HOSTED_ZONE_ID": self._aws_hosted_zone_id,
+            "AWS_ACCESS_KEY_ID": self._aws_access_key_id,
+            "AWS_SECRET_ACCESS_KEY": self._aws_secret_access_key,
         }
-        if self._aws_access_key_id:
-            additional_config["AWS_ACCESS_KEY_ID"] = self._aws_access_key_id
-        if self._aws_secret_access_key:
-            additional_config["AWS_SECRET_ACCESS_KEY"] = self._aws_secret_access_key
         if self._aws_max_retries:
             additional_config["AWS_MAX_RETRIES"] = self._aws_max_retries
         if self._aws_polling_interval:
