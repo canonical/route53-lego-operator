@@ -2,7 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Retrieves certificates from an ACME server using the aws route53 dns provider."""
+"""Retrieves certificates from an ACME server using the AWS Route53 dns provider."""
 
 import logging
 from typing import Dict
