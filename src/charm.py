@@ -88,19 +88,15 @@ class Route53AcmeOperatorCharm(AcmeClient):
             additional_config["AWS_TTL"] = self._aws_ttl
         return additional_config
 
-    def _on_config_changed(self, _):
+    def _on_config_changed(self, _) -> None:
         """Handles config-changed events."""
-        if not self._check_required_config():
+        if not self._validate_route53_config():
             return
-        try:
-            self.validate_generic_acme_config()
-        except ValueError as e:
-            logger.error("Invalid config: %s", e)
-            self.unit.status = BlockedStatus(str(e))
+        if not self.validate_generic_acme_config():
             return
         self.unit.status = ActiveStatus()
 
-    def _check_required_config(self) -> bool:
+    def _validate_route53_config(self) -> bool:
         """Checks whether required config options are set.
 
         Returns:
