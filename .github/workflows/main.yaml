@@ -51,7 +51,7 @@ jobs:
         if: ${{ github.ref_name == 'main' }}
         with:
           name: tested-charm
-          path: .tox/**/route53-acme-operator_ubuntu-20.04-amd64_ubuntu-22.04-amd64.charm
+          path: .tox/**/route53-acme-operator_ubuntu-22.04-amd64.charm
           retention-days: 5
 
   publish-charm:
