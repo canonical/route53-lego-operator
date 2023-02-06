@@ -27,7 +27,7 @@ async def test_build_and_deploy(ops_test):
         charm,
         resources=resources,
         application_name=APP_NAME,
-        series="focal",
+        series="jammy",
         config={
             "email": "example@email.com",
             "aws_access_key_id": "dummy key",
