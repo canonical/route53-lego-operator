@@ -41,9 +41,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
       - name: Setup LXD
-        uses: canonical/setup-lxd@90d76101915da56a42a562ba766b1a77019242fd
+        uses: canonical/setup-lxd@main
         with:
-          channel: 5.10/stable
+          channel: 5.12/stable
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -57,6 +57,18 @@ jobs:
           name: tested-charm
           path: .tox/**/route53-acme-operator_ubuntu-22.04-amd64.charm
           retention-days: 5
+      - name: Archive charmcraft logs
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: charmcraft-logs
+          path: /home/runner/.local/state/charmcraft/log/*.log
+      - name: Archive juju crashdump
+        if: failure()
+        uses: actions/upload-artifact@v3
+        with:
+          name: juju-crashdump
+          path: juju-crashdump-*.tar.xz
 
   publish-charm:
     name: Publish Charm
