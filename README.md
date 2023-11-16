@@ -1,6 +1,5 @@
-# route53-acme-operator
-
-## Description
+# Route53 ACME Operator (K8s)
+[![CharmHub Badge](https://charmhub.io/route53-acme-operator/badge.svg)](https://charmhub.io/route53-acme-operator)
 
 Let's Encrypt certificates in the Juju ecosystem for AWS route53 users.
 
