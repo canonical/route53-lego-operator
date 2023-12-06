@@ -9,12 +9,12 @@ from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 from parameterized import parameterized  # type: ignore[import]
 
-from charm import Route53AcmeOperatorCharm
+from charm import Route53LegoK8s
 
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
-        self.harness = Harness(Route53AcmeOperatorCharm)
+        self.harness = Harness(Route53LegoK8s)
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 

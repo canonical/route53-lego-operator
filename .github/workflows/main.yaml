@@ -53,7 +53,7 @@ jobs:
         if: ${{ github.ref_name == 'main' }}
         with:
           name: tested-charm
-          path: .tox/**/route53-acme-operator_ubuntu-22.04-amd64.charm
+          path: .tox/**/route53-lego-k8s_ubuntu-22.04-amd64.charm
           retention-days: 5
       - name: Archive charmcraft logs
         if: failure()
@@ -83,7 +83,7 @@ jobs:
         with:
           name: tested-charm
       - name: Move charm in current directory
-        run: find ./ -name route53-acme-operator_ubuntu-22.04-amd64.charm -exec mv -t ./ {} \;
+        run: find ./ -name route53-lego-k8s_ubuntu-22.04-amd64.charm -exec mv -t ./ {} \;
       - name: Select Charmhub channel
         uses: canonical/charming-actions/channel@2.4.0
         id: channel
