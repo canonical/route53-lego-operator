@@ -1,5 +1,5 @@
-# Route53 ACME Operator (K8s)
-[![CharmHub Badge](https://charmhub.io/route53-acme-operator/badge.svg)](https://charmhub.io/route53-acme-operator)
+# Route53 LEGO Operator (K8s)
+[![CharmHub Badge](https://charmhub.io/route53-lego-k8s/badge.svg)](https://charmhub.io/route53-lego-k8s)
 
 Let's Encrypt certificates in the Juju ecosystem for AWS route53 users.
 
@@ -13,7 +13,7 @@ charms that require Let's Encrypt certificates need to implement the requirer si
 Create a YAML configuration file with the following fields:
 
 ```yaml
-route53-acme-operator:
+route53-lego-k8s:
   email: <Account email address>
   aws_access_key_id: <AWS Access Key ID>
   aws_secret_access_key: <AWS Secret Access Key>
@@ -21,16 +21,16 @@ route53-acme-operator:
   aws_hosted_zone_id: <AWS Hosted Zone ID>
 ```
 
-Deploy `route53-acme-operator`:
+Deploy `route53-lego-k8s`:
 
 ```bash
-juju deploy route53-acme-operator --config <yaml config file>
+juju deploy route53-lego-k8s --config <yaml config file>
 ```
 
 Relate it to a `tls-certificates-requirer` charm:
 
 ```bash
-juju relate route53-acme-operator:certificates <tls-certificates-requirer>
+juju relate route53-lego-k8s:certificates <tls-certificates-requirer>
 ````
 
 ## Config
