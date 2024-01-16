@@ -1,0 +1,32 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: route53-lego-k8s
+
+display-name: Route53 LEGO (K8s)
+
+description: |
+  LEGO operator implementing the provider side of the `tls-certificates`
+  interface to get signed certificates from the `Let's Encrypt` ACME server using route53 DNS.
+summary: |
+  LEGO operator implementing the provider side of the `tls-certificates`
+  interface to get signed certificates from the `Let's Encrypt` ACME server using route53 DNS.
+website: https://charmhub.io/route53-lego-k8s
+source: https://github.com/canonical/route53-lego-k8s-operator
+issues: https://github.com/canonical/route53-lego-k8s-operator/issues
+docs: https://discourse.charmhub.io/t/route53-acme-operator-docs-index/12514
+
+
+provides:
+  certificates:
+    interface: tls-certificates
+
+containers:
+  lego:
+    resource: lego-image
+
+resources:
+  lego-image:
+    type: oci-image
+    description: Distroless OCI image for lego built with rockcraft.
+    upstream-source: ghcr.io/canonical/lego:4.14.2
