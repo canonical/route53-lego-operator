@@ -18,7 +18,6 @@ certifi==2023.11.17
     #   requests
 cffi==1.16.0
     # via
-    #   -c requirements.txt
     #   cryptography
     #   pynacl
 charset-normalizer==3.3.2
@@ -27,12 +26,12 @@ click==8.1.7
     # via black
 codespell==2.2.6
     # via -r test-requirements.in
-coverage[toml]==7.4.0
-    # via -r test-requirements.in
-cryptography==42.0.1
+coverage[toml]==7.4.1
     # via
-    #   -c requirements.txt
-    #   paramiko
+    #   -r test-requirements.in
+    #   coverage
+cryptography==42.0.1
+    # via paramiko
 decorator==5.1.1
     # via
     #   ipdb
@@ -131,9 +130,7 @@ pyasn1-modules==0.3.0
 pycodestyle==2.11.1
     # via flake8
 pycparser==2.21
-    # via
-    #   -c requirements.txt
-    #   cffi
+    # via cffi
 pydocstyle==6.3.0
     # via flake8-docstrings
 pyflakes==3.1.0
@@ -168,7 +165,6 @@ pytz==2023.3.post1
     # via pyrfc3339
 pyyaml==6.0.1
     # via
-    #   -c requirements.txt
     #   juju
     #   kubernetes
     #   pytest-operator
@@ -219,9 +215,7 @@ urllib3==2.1.0
 wcwidth==0.2.13
     # via prompt-toolkit
 websocket-client==1.7.0
-    # via
-    #   -c requirements.txt
-    #   kubernetes
+    # via kubernetes
 websockets==12.0
     # via juju
 
