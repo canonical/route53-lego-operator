@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 
@@ -23,9 +23,11 @@ TLS_REQUIRER_CHARM_NAME = "tls-certificates-requirer"
 async def build_and_deploy(ops_test: OpsTest):
     """Build the charm-under-test and deploy it."""
     charm = await ops_test.build_charm(".")
+    resources = {"lego-image": METADATA["resources"]["lego-image"]["upstream-source"]}
     assert ops_test.model
     await ops_test.model.deploy(
         charm,
+        resources=resources,
         application_name=APP_NAME,
         series="jammy",
         config={
