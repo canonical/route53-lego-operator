@@ -47,7 +47,7 @@ jobs:
         with:
           provider: microk8s
           channel: 1.28-strict/stable
-          juju-channel: 3.3/stable
+          juju-channel: 3.4/stable
       - name: Run integration tests
         run: tox -e integration
       - name: Archive Tested Charm
