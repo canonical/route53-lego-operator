@@ -7,10 +7,12 @@ display-name: Route53 LEGO (K8s)
 
 description: |
   LEGO operator implementing the provider side of the `tls-certificates`
-  interface to get signed certificates from the `Let's Encrypt` ACME server using route53 DNS.
+  interface to get signed certificates from the `Let's Encrypt` ACME server
+  using AMAZON ROUTE 53 plugin and the DNS-01 challenge.
 summary: |
   LEGO operator implementing the provider side of the `tls-certificates`
-  interface to get signed certificates from the `Let's Encrypt` ACME server using route53 DNS.
+  interface to get signed certificates from the `Let's Encrypt` ACME server
+  using AMAZON ROUTE 53 plugin and the DNS-01 challenge.
 website: https://charmhub.io/route53-lego-k8s
 source: https://github.com/canonical/route53-lego-k8s-operator
 issues: https://github.com/canonical/route53-lego-k8s-operator/issues
