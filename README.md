@@ -4,7 +4,7 @@
 LEGO operator implementing the provider side of the 
 [`tls-certificates` interface](https://github.com/canonical/tls-certificates-interface) 
 to get signed certificates from the `Let's Encrypt` ACME server
-using [AMAZON ROUTE 53](https://go-acme.github.io/lego/dns/route53/) plugin and the DNS-01 challenge.
+using [Amazon Route 53](https://go-acme.github.io/lego/dns/route53/) plugin and the DNS-01 challenge.
 
 For more information including guides, integrations, configuration options, see [Route53 LEGO's Charmhub page](https://charmhub.io/route53-lego-k8s).
 
