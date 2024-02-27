@@ -1,7 +1,7 @@
 options:
   email:
     type: string
-    description: Account email address
+    description: Account email address to receive notifications from Let's Encrypt.
   server:
     type: string
     description: Certificate authority server
