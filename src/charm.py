@@ -52,22 +52,22 @@ class Route53LegoK8s(AcmeClient):
     @property
     def _aws_max_retries(self) -> str:
         """Returns aws max retries from config."""
-        return self.model.config.get("aws_max_retries")
+        return str(self.model.config.get("aws_max_retries"))
 
     @property
     def _aws_polling_interval(self) -> str:
         """Returns aws polling interval from config."""
-        return self.model.config.get("aws_polling_interval")
+        return str(self.model.config.get("aws_polling_interval"))
 
     @property
     def _aws_propagation_timeout(self) -> str:
         """Returns aws propagation timeout from config."""
-        return self.model.config.get("aws_propagation_timeout")
+        return str(self.model.config.get("aws_propagation_timeout"))
 
     @property
     def _aws_ttl(self) -> str:
         """Returns aws ttl from config."""
-        return self.model.config.get("aws_ttl")
+        return str(self.model.config.get("aws_ttl"))
 
     @property
     def _plugin_config(self) -> Dict[str, str]:
