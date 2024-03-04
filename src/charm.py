@@ -7,7 +7,8 @@
 import logging
 from typing import Dict
 
-from charms.lego_base_k8s.v0.lego_client import AcmeClient  # type: ignore[import]
+from charms.lego_base_k8s.v0.lego_client import AcmeClient
+from ops.framework import EventBase
 from ops.main import main
 from ops.model import ActiveStatus, BlockedStatus
 
@@ -25,29 +26,29 @@ class Route53LegoK8s(AcmeClient):
     ]
 
     def __init__(self, *args):
-        """Uses the lego_client library to manage events."""
+        """Use the lego_client library to manage events."""
         super().__init__(*args, plugin="route53")
         self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     @property
     def _aws_access_key_id(self) -> str:
-        """Returns aws access key from config."""
-        return self.model.config.get("aws_access_key_id")
+        """Return aws access key from config."""
+        return self.model.config.get("aws_access_key_id", "")
 
     @property
     def _aws_hosted_zone_id(self) -> str:
-        """Returns aws hosted zone id from config."""
-        return self.model.config.get("aws_hosted_zone_id")
+        """Return aws hosted zone id from config."""
+        return self.model.config.get("aws_hosted_zone_id", "")
 
     @property
     def _aws_secret_access_key(self) -> str:
-        """Returns aws secret access key from config."""
-        return self.model.config.get("aws_secret_access_key")
+        """Return aws secret access key from config."""
+        return self.model.config.get("aws_secret_access_key", "")
 
     @property
     def _aws_region(self) -> str:
         """Returns aws region from config."""
-        return self.model.config.get("aws_region")
+        return self.model.config.get("aws_region", "")
 
     @property
     def _aws_max_retries(self) -> str:
@@ -88,8 +89,8 @@ class Route53LegoK8s(AcmeClient):
             additional_config["AWS_TTL"] = self._aws_ttl
         return additional_config
 
-    def _on_config_changed(self, _) -> None:
-        """Handles config-changed events."""
+    def _on_config_changed(self, event: EventBase) -> None:
+        """Handle config-changed events."""
         if not self._validate_route53_config():
             return
         if not self.validate_generic_acme_config():
@@ -97,7 +98,7 @@ class Route53LegoK8s(AcmeClient):
         self.unit.status = ActiveStatus()
 
     def _validate_route53_config(self) -> bool:
-        """Checks whether required config options are set.
+        """Check whether required config options are set.
 
         Returns:
             bool: True/False
