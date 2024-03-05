@@ -164,7 +164,9 @@ traitlets==5.14.1
     #   ipython
     #   matplotlib-inline
 typing-extensions==4.10.0
-    # via typing-inspect
+    # via
+    #   -c requirements.txt
+    #   typing-inspect
 typing-inspect==0.9.0
     # via juju
 urllib3==2.2.1
