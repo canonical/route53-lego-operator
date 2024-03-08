@@ -8,9 +8,7 @@ import logging
 from typing import Dict
 
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
-from ops.framework import EventBase
 from ops.main import main
-from ops.model import ActiveStatus, BlockedStatus
 
 logger = logging.getLogger(__name__)
 
@@ -28,7 +26,6 @@ class Route53LegoK8s(AcmeClient):
     def __init__(self, *args):
         """Use the lego_client library to manage events."""
         super().__init__(*args, plugin="route53")
-        self.framework.observe(self.on.config_changed, self._on_config_changed)
 
     @property
     def _aws_access_key_id(self) -> str:
@@ -89,27 +86,17 @@ class Route53LegoK8s(AcmeClient):
             additional_config["AWS_TTL"] = self._aws_ttl
         return additional_config
 
-    def _on_config_changed(self, event: EventBase) -> None:
-        """Handle config-changed events."""
-        if not self._validate_route53_config():
-            return
-        if not self.validate_generic_acme_config():
-            return
-        self.unit.status = ActiveStatus()
-
-    def _validate_route53_config(self) -> bool:
+    def _validate_plugin_config(self) -> str:
         """Check whether required config options are set.
 
         Returns:
-            bool: True/False
+            str: Error message if any required config options are missing.
         """
         if missing_config := [
             option for option in self.REQUIRED_CONFIG if not self._plugin_config[option]
         ]:
-            msg = f"The following config options must be set: {', '.join(missing_config)}"
-            self.unit.status = BlockedStatus(msg)
-            return False
-        return True
+            return f"The following config options must be set: {', '.join(missing_config)}"
+        return ""
 
 
 if __name__ == "__main__":  # pragma: nocover

@@ -18,6 +18,7 @@ class TestCharm(unittest.TestCase):
         self.harness.begin()
 
     def test_given_email_is_valid_when_config_changed_then_status_is_active(self):
+        self.harness.set_can_connect("lego", True)
         self.harness.update_config(
             {
                 "email": "example@email.com",
@@ -27,9 +28,11 @@ class TestCharm(unittest.TestCase):
                 "aws_hosted_zone_id": "dummy zone id",
             }
         )
+        self.harness.evaluate_status()
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
 
     def test_given_email_is_invalid_when_config_changed_then_status_is_blocked(self):
+        self.harness.set_can_connect("lego", True)
         self.harness.update_config(
             {
                 "email": "invalid-email",
@@ -39,6 +42,7 @@ class TestCharm(unittest.TestCase):
                 "aws_hosted_zone_id": "dummy zone id",
             }
         )
+        self.harness.evaluate_status()
         self.assertEqual(self.harness.model.unit.status, BlockedStatus("Invalid email address"))
 
     @parameterized.expand(
@@ -46,7 +50,7 @@ class TestCharm(unittest.TestCase):
             (
                 "AWS_ACCESS_KEY_ID",
                 {
-                    "email": "invalid-email",
+                    "email": "example@email.com",
                     "aws_secret_access_key": "dummy access key",
                     "aws_region": "dummy region",
                     "aws_hosted_zone_id": "dummy zone id",
@@ -55,7 +59,7 @@ class TestCharm(unittest.TestCase):
             (
                 "AWS_SECRET_ACCESS_KEY",
                 {
-                    "email": "invalid-email",
+                    "email": "example@email.com",
                     "aws_access_key_id": "dummy key",
                     "aws_region": "dummy region",
                     "aws_hosted_zone_id": "dummy zone id",
@@ -64,7 +68,7 @@ class TestCharm(unittest.TestCase):
             (
                 "AWS_REGION",
                 {
-                    "email": "invalid-email",
+                    "email": "example@email.com",
                     "aws_access_key_id": "dummy key",
                     "aws_secret_access_key": "dummy access key",
                     "aws_hosted_zone_id": "dummy zone id",
@@ -73,7 +77,7 @@ class TestCharm(unittest.TestCase):
             (
                 "AWS_HOSTED_ZONE_ID",
                 {
-                    "email": "invalid-email",
+                    "email": "example@email.com",
                     "aws_access_key_id": "dummy key",
                     "aws_secret_access_key": "dummy access key",
                     "aws_region": "dummy region",
@@ -84,7 +88,9 @@ class TestCharm(unittest.TestCase):
     def test_given_credentials_missing_when_config_changed_then_status_is_blocked(
         self, option, config
     ):
+        self.harness.set_can_connect("lego", True)
         self.harness.update_config(config)
+        self.harness.evaluate_status()
         self.assertEqual(
             self.harness.model.unit.status,
             BlockedStatus(f"The following config options must be set: {option}"),
