@@ -35,4 +35,4 @@ resources:
   lego-image:
     type: oci-image
     description: Distroless OCI image for lego built with rockcraft.
-    upstream-source: ghcr.io/canonical/lego:4.15.0
+    upstream-source: ghcr.io/canonical/lego:4.16.1
