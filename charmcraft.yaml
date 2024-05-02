@@ -1,3 +1,45 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: route53-lego-k8s
+
+
+description: |
+  LEGO operator implementing the provider side of the `tls-certificates`
+  interface to get signed certificates from the `Let's Encrypt` ACME server
+  using Amazon Route 53 plugin and the DNS-01 challenge.
+summary: |
+  LEGO operator implementing the provider side of the `tls-certificates`
+  interface to get signed certificates from the `Let's Encrypt` ACME server
+  using Amazon Route 53 plugin and the DNS-01 challenge.
+links:
+  website:
+    - https://charmhub.io/route53-lego-k8s
+  source:
+    - https://github.com/canonical/route53-lego-k8s-operator
+  issues:
+    - https://github.com/canonical/route53-lego-k8s-operator/issues
+  documentation: https://discourse.charmhub.io/t/route53-acme-operator-docs-index/12514
+
+
+provides:
+  certificates:
+    interface: tls-certificates
+
+requires:
+  logging:
+    interface: loki_push_api
+
+containers:
+  lego:
+    resource: lego-image
+
+resources:
+  lego-image:
+    type: oci-image
+    description: Distroless OCI image for lego built with rockcraft.
+    upstream-source: ghcr.io/canonical/lego:4.16.1
+
 type: "charm"
 bases:
   - build-on:
@@ -15,3 +57,41 @@ parts:
       - rustc
       - cargo
       - pkg-config
+
+config:
+  options:
+    email:
+      type: string
+      description: Account email address to receive notifications from Let's Encrypt.
+    server:
+      type: string
+      description: Certificate authority server
+      default: "https://acme-v02.api.letsencrypt.org/directory"
+    aws_access_key_id:
+      type: string
+      description: AWS Access Key ID
+    aws_secret_access_key:
+      type: string
+      description: AWS Secret Access Key
+    aws_region:
+      type: string
+      description: AWS Region
+    aws_hosted_zone_id:
+      type: string
+      description: AWS Hosted Zone ID
+    aws_max_retries:
+      type: int
+      default: 5
+      description: The number of maximum returns the service will use to make an individual API request
+    aws_polling_interval:
+      type: int
+      default: 15
+      description: Time between DNS propagation checks in seconds
+    aws_propagation_timeout:
+      type: int
+      default: 3600
+      description: Maximum waiting time for DNS propagation in seconds
+    aws_ttl:
+      type: int
+      default: 120
+      description: The TTL of the TXT record used for the DNS challenge
