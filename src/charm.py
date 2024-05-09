@@ -30,22 +30,22 @@ class Route53LegoK8s(AcmeClient):
     @property
     def _aws_access_key_id(self) -> str:
         """Return aws access key from config."""
-        return self.model.config.get("aws_access_key_id", "")
+        return self._get_str_config("aws_access_key_id")
 
     @property
     def _aws_hosted_zone_id(self) -> str:
         """Return aws hosted zone id from config."""
-        return self.model.config.get("aws_hosted_zone_id", "")
+        return self._get_str_config("aws_hosted_zone_id")
 
     @property
     def _aws_secret_access_key(self) -> str:
         """Return aws secret access key from config."""
-        return self.model.config.get("aws_secret_access_key", "")
+        return self._get_str_config("aws_secret_access_key")
 
     @property
     def _aws_region(self) -> str:
         """Returns aws region from config."""
-        return self.model.config.get("aws_region", "")
+        return self._get_str_config("aws_region")
 
     @property
     def _aws_max_retries(self) -> str:
@@ -85,6 +85,20 @@ class Route53LegoK8s(AcmeClient):
         if self._aws_ttl:
             additional_config["AWS_TTL"] = self._aws_ttl
         return additional_config
+
+    def _get_str_config(self, key: str) -> str:
+        """Return value of specified string juju config.
+
+        Checks type and makes sure to return a string or a None
+        Args:
+            key: config option key
+        Returns:
+            Value of the config or None
+        """
+        value = self.model.config.get(key, None)
+        if not value or not isinstance(value, str):
+            return ""
+        return value
 
     def _validate_plugin_config(self) -> str:
         """Check whether required config options are set.
