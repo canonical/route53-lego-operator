@@ -29,7 +29,10 @@ class TestCharm(unittest.TestCase):
             }
         )
         self.harness.evaluate_status()
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+        self.assertEqual(
+            self.harness.model.unit.status,
+            ActiveStatus("0/0 certificate requests are fulfilled"),
+        )
 
     def test_given_email_is_invalid_when_config_changed_then_status_is_blocked(self):
         self.harness.set_can_connect("lego", True)
