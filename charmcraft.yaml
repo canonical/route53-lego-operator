@@ -69,31 +69,6 @@ config:
       type: string
       description: Certificate authority server
       default: "https://acme-v02.api.letsencrypt.org/directory"
-    aws_access_key_id:
+    route53-config-secret:
       type: string
-      description: AWS Access Key ID
-    aws_secret_access_key:
-      type: string
-      description: AWS Secret Access Key
-    aws_region:
-      type: string
-      description: AWS Region
-    aws_hosted_zone_id:
-      type: string
-      description: AWS Hosted Zone ID
-    aws_max_retries:
-      type: int
-      default: 5
-      description: The number of maximum returns the service will use to make an individual API request
-    aws_polling_interval:
-      type: int
-      default: 15
-      description: Time between DNS propagation checks in seconds
-    aws_propagation_timeout:
-      type: int
-      default: 3600
-      description: Maximum waiting time for DNS propagation in seconds
-    aws_ttl:
-      type: int
-      default: 120
-      description: The TTL of the TXT record used for the DNS challenge
+      description: The secret id of the secret that contains all of the configuration options required to get a certificate.
