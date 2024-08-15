@@ -15,13 +15,12 @@ charmcraft fetch-lib charms.lego_client_operator.v1.lego_client
 You will also need the following libraries:
 
 ```shell
-charmcraft fetch-lib charms.tls_certificates_interface.v3.tls_certificates
+charmcraft fetch-lib charms.tls_certificates_interface.v4.tls_certificates
 charmcraft fetch-lib charms.certificate_transfer_interface.v1.certificate_transfer
 charmcraft fetch-lib charms.loki_k8s.v1.loki_push_api
 ```
 
 You will also need to add the following library to the charm's `requirements.txt` file:
-- pylego
 - jsonschema
 - cryptography
 - cosl
@@ -34,15 +33,14 @@ class ExampleAcmeCharm(AcmeClient):
     def __init__(self, *args):
         super().__init__(*args, plugin="namecheap")
         self._server = "https://acme-staging-v02.api.letsencrypt.org/directory"
+        self._email = "testingmctestface@test.com"
 
-    def _validate_plugin_config(self) -> str:
-        if not self._api_key:
+    def _validate_plugin_config(self, plugin_config: Dict[str, str]) -> str:
+        if "NAMECHEAP_API_USER" not in plugin_config:
+            return "API user was not"
+        if "NAMECHEAP_API_KEY" not in plugin_config:
             return "API key was not provided"
         return ""
-
-    @property
-    def _plugin_config(self):
-        return {}
 ```
 
 Charms using this library are expected to:
@@ -52,15 +50,15 @@ Charms using this library are expected to:
   it should validate the plugin specific configuration,
   returning a string with an error message if the
   plugin specific configuration is invalid, otherwise an empty string.
-- Specify a `{plugin-name}-config-secret` option in their `metadata.yaml` file:
-```yaml
+- Specify a config option in the metadata.yaml file:
+``yaml
 config:
   options:
-    route53-config-secret:
+    <plugin>-config-secret:
       type: string
       description: The secret ID that contains the options for the plugin.
-- Grant a secret to the charm that has the plugin speecific configuration options
-  as a Dict[str,str]
+- Create a secret that contains all of the required parameters for the plugin.
+- Grant this secret to the charm and store the secret id in the previously defined config option.
 - Specify a `certificates` integration in their
   `metadata.yaml` file:
 ```yaml
@@ -83,18 +81,19 @@ import logging
 import os
 import re
 from abc import abstractmethod
-from typing import Dict, Optional, Set
+from typing import Dict, Set
 from urllib.parse import urlparse
 
 from charms.certificate_transfer_interface.v1.certificate_transfer import (
     CertificateTransferProvides,
 )
 from charms.loki_k8s.v1.loki_push_api import LogForwarder
-from charms.tls_certificates_interface.v3.tls_certificates import (
-    TLSCertificatesProvidesV3,
+from charms.tls_certificates_interface.v4.tls_certificates import (
+    Certificate,
+    CertificateSigningRequest,
+    ProviderCertificate,
+    TLSCertificatesProvidesV4,
 )
-from cryptography import x509
-from cryptography.x509.oid import NameOID
 from ops import ModelError, Secret, SecretNotFoundError
 from ops.charm import CharmBase, CollectStatusEvent
 from ops.framework import EventBase
@@ -129,13 +128,14 @@ class AcmeClient(CharmBase):
     def __init__(self, *args, plugin: str):
         super().__init__(*args)
         self._logging = LogForwarder(self, relation_name="logging")
-        self.tls_certificates = TLSCertificatesProvidesV3(self, CERTIFICATES_RELATION_NAME)
+        self.tls_certificates = TLSCertificatesProvidesV4(self, CERTIFICATES_RELATION_NAME)
         self.cert_transfer = CertificateTransferProvides(self, CA_TRANSFER_RELATION_NAME)
+
         [
             self.framework.observe(event, self._configure)
             for event in [
-                self.tls_certificates.on.certificate_creation_request,
-                self.on.send_ca_cert_relation_joined,
+                self.on[CA_TRANSFER_RELATION_NAME].relation_joined,
+                self.on[CERTIFICATES_RELATION_NAME].relation_changed,
                 self.on.config_changed,
                 self.on.update_status,
             ]
@@ -146,13 +146,13 @@ class AcmeClient(CharmBase):
 
     def _on_collect_status(self, event: CollectStatusEvent) -> None:
         """Handle the collect status event."""
-        if not (plugin_config := self._get_plugin_config_from_secret()):
-            event.add_status(BlockedStatus("please grant the plugin config secret to the charm"))
-            return
-        if err := self._validate_plugin_config(plugin_config):
+        if err := self.validate_generic_acme_config():
             event.add_status(BlockedStatus(err))
             return
-        if err := self._validate_generic_acme_config():
+        if not self._plugin_config:
+            event.add_status(BlockedStatus("plugin config secret invalid or not found"))
+            return
+        if err := self._validate_plugin_config(self._plugin_config):
             event.add_status(BlockedStatus(err))
             return
         event.add_status(ActiveStatus(self._get_certificate_fulfillment_status()))
@@ -164,26 +164,36 @@ class AcmeClient(CharmBase):
         Go through all the certificates relations and handle outstanding requests.
         Go Through all certificate transfer relations and share the CA certificates.
         """
-        if not (plugin_config := self._get_plugin_config_from_secret()):
-            logger.error("couldn't access the user secret with the plugin details.")
-            return
-        if err := self._validate_plugin_config(plugin_config):
+        if err := self.validate_generic_acme_config():
             logger.error(err)
             return
-        if err := self._validate_generic_acme_config():
+        if err := self._validate_plugin_config(self._plugin_config):
             logger.error(err)
             return
         outstanding_requests = self.tls_certificates.get_outstanding_certificate_requests()
         for request in outstanding_requests:
             self._generate_signed_certificate(
-                csr=request.csr,
-                plugin_config=plugin_config,
+                csr=request.certificate_signing_request,
                 relation_id=request.relation_id,
             )
-        if self._is_relation_created(CA_TRANSFER_RELATION_NAME):
+        if len(self.model.relations.get(CA_TRANSFER_RELATION_NAME, [])) > 0:
             self.cert_transfer.add_certificates(self._get_issuing_ca_certificates())
 
-    def _validate_generic_acme_config(self) -> str:
+    @abstractmethod
+    def _validate_plugin_config(self, plugin_config: Dict[str, str]) -> str:
+        """Validate plugin specific configuration.
+
+        Implementations need to validate the plugin
+        specific configuration that is received as the
+        first argument of the function and return either
+        an empty string if valid or the error message if invalid.
+
+        Returns:
+            str: Error message if invalid, otherwise an empty string.
+        """
+        pass
+
+    def validate_generic_acme_config(self) -> str:
         """Validate generic ACME config.
 
         Returns:
@@ -193,49 +203,50 @@ class AcmeClient(CharmBase):
             return "Email address was not provided"
         if not self._server:
             return "ACME server was not provided"
-        if not self._email_is_valid(self._email):
+        if not _email_is_valid(self._email):
             return "Invalid email address"
-        if not self._server_is_valid(self._server):
+        if not _server_is_valid(self._server):
             return "Invalid ACME server"
         return ""
 
-    def _generate_signed_certificate(
-        self, csr: str, plugin_config: Dict[str, str], relation_id: int
-    ):
+    def _generate_signed_certificate(self, csr: CertificateSigningRequest, relation_id: int):
         """Generate signed certificate from the ACME provider."""
         if not self.unit.is_leader():
             logger.debug("Only the leader can handle certificate requests")
             return
-        csr_subject = _get_subject_from_csr(csr)
-        logger.info("Received Certificate Creation Request for domain %s", csr_subject)
+        logger.info("Received Certificate Creation Request for domain %s", csr.common_name)
         try:
-            output = run_lego_command(
-                csr=csr.encode(),
+            response = run_lego_command(
                 email=self._email,
                 server=self._server,
-                env=plugin_config | self._app_environment,
+                csr=csr.raw.encode(),
+                env=self._plugin_config | self._app_environment,
                 plugin=self._plugin,
             )
         except LEGOError as e:
             logger.error(
-                "Failed to execute lego command: %s \
+                "An error occured executing the lego command: %s \
                 will try again in during the next update status event.",
                 e,
             )
             return
-        logger.info("Received certificate for domain: %s", output.metadata.domain)
         self.tls_certificates.set_relation_certificate(
-            certificate=output.certificate,
-            certificate_signing_request=output.csr,
-            ca=output.issuer_certificate,
-            chain=[output.issuer_certificate, output.certificate],
-            relation_id=relation_id,
+            provider_certificate=ProviderCertificate(
+                certificate=Certificate.from_string(response.certificate),
+                certificate_signing_request=response.csr,
+                ca=Certificate.from_string(response.issuer_certificate),
+                chain=[
+                    Certificate.from_string(cert)
+                    for cert in [response.certificate, response.issuer_certificate]
+                ],
+                relation_id=relation_id,
+            ),
         )
 
     def _get_issuing_ca_certificates(self) -> Set[str]:
         """Get a list of the CA certificates that have been used with the issued certs."""
         return {
-            provider_certificate.ca
+            str(provider_certificate.ca)
             for provider_certificate in self.tls_certificates.get_provider_certificates()
         }
 
@@ -244,7 +255,7 @@ class AcmeClient(CharmBase):
         outstanding_requests_num = len(
             self.tls_certificates.get_outstanding_certificate_requests()
         )
-        total_requests_num = len(self.tls_certificates.get_requirer_csrs())
+        total_requests_num = len(self.tls_certificates.get_certificate_requests())
         fulfilled_certs = total_requests_num - outstanding_requests_num
         return f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
 
@@ -261,57 +272,16 @@ class AcmeClient(CharmBase):
             env["NO_PROXY"] = no_proxy
         return env
 
-    @abstractmethod
-    def _validate_plugin_config(self, plugin_config: Dict[str, str]) -> str | None:
-        """Plugin specific configuration options for the charm.
+    @property
+    def _plugin_config(self) -> Dict[str, str]:
+        """Plugin specific additional configuration for the command.
 
-        Implement this method in your charm to validate that the dictionary returned
-        from the given user secret is valid.
-
-        Args:
-            plugin_config: The dictionary that is located in the user secret that will need to
-            be validated.
+        Implement this method in your charm to return a dictionary with the plugin specific
+        configuration.
 
         Returns:
-            str: an error if any, otherwise None.
+            Dict[str,str]: Plugin specific configuration.
         """
-
-    @staticmethod
-    def _email_is_valid(email: str) -> bool:
-        """Validate the format of the email address."""
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            return False
-        return True
-
-    @staticmethod
-    def _server_is_valid(server: str) -> bool:
-        """Validate the format of the ACME server address."""
-        urlparts = urlparse(server)
-        if not all([urlparts.scheme, urlparts.netloc]):
-            return False
-        return True
-
-    @property
-    def _email(self) -> Optional[str]:
-        """Email address to use for the ACME account."""
-        email = self.model.config.get("email", None)
-        if not isinstance(email, str):
-            return None
-        return email
-
-    @property
-    def _server(self) -> Optional[str]:
-        """ACME server address."""
-        server = self.model.config.get("server", None)
-        if not isinstance(server, str):
-            return None
-        return server
-
-    ## Helpers
-    def _is_relation_created(self, relation_name: str) -> bool:
-        return bool(self.model.get_relation(relation_name))
-
-    def _get_plugin_config_from_secret(self) -> Dict[str, str] | None:
         try:
             plugin_config_secret_id = str(
                 self.model.config.get(f"{self._plugin}-config-secret", "")
@@ -319,11 +289,27 @@ class AcmeClient(CharmBase):
             plugin_config_secret: Secret = self.model.get_secret(id=plugin_config_secret_id)
             plugin_config = plugin_config_secret.get_content(refresh=True)
         except (SecretNotFoundError, ModelError):
-            return None
+            return {}
         return plugin_config
 
+    @property
+    def _email(self) -> str | None:
+        """Email address to use for the ACME account."""
+        email = self.model.config.get("email", None)
+        if not isinstance(email, str):
+            return None
+        return email
 
-def get_env_var(env_var: str) -> Optional[str]:
+    @property
+    def _server(self) -> str | None:
+        """ACME server address."""
+        server = self.model.config.get("server", None)
+        if not isinstance(server, str):
+            return None
+        return server
+
+
+def get_env_var(env_var: str) -> str | None:
     """Get the environment variable value.
 
     Looks for all upper-case and all low-case of the `env_var`.
@@ -337,11 +323,16 @@ def get_env_var(env_var: str) -> Optional[str]:
     return os.environ.get(env_var.upper(), os.environ.get(env_var.lower(), None))
 
 
-def _get_subject_from_csr(certificate_signing_request: str) -> str:
-    """Return subject from a provided CSR."""
-    csr = x509.load_pem_x509_csr(certificate_signing_request.encode())
-    subject_value = csr.subject.get_attributes_for_oid(NameOID.COMMON_NAME)[0].value
-    if isinstance(subject_value, bytes):
-        return subject_value.decode()
-    else:
-        return str(subject_value)
+def _email_is_valid(email: str) -> bool:
+    """Validate the format of the email address."""
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
+        return False
+    return True
+
+
+def _server_is_valid(server: str) -> bool:
+    """Validate the format of the ACME server address."""
+    urlparts = urlparse(server)
+    if not all([urlparts.scheme, urlparts.netloc]):
+        return False
+    return True
