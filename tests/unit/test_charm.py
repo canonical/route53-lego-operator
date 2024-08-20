@@ -17,17 +17,21 @@ class TestCharm(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
 
+    def create_and_grant_plugin_config_secret(self, content: dict[str, str]):
+        id = self.harness.add_user_secret(content)
+        self.harness.grant_secret(id, self.harness.charm.app.name)
+        return id
+
     def test_given_email_is_valid_when_config_changed_then_status_is_active(self):
-        self.harness.set_can_connect("lego", True)
-        self.harness.update_config(
+        id = self.create_and_grant_plugin_config_secret(
             {
-                "email": "example@email.com",
-                "aws_access_key_id": "dummy key",
-                "aws_secret_access_key": "dummy access key",
-                "aws_region": "dummy region",
-                "aws_hosted_zone_id": "dummy zone id",
+                "aws-access-key-id": "dummy key",
+                "aws-secret-access-key": "dummy access key",
+                "aws-region": "dummy region",
+                "aws-hosted-zone-id": "dummy zone id",
             }
         )
+        self.harness.update_config({"email": "example@email.com", "route53-plugin-secret": id})
         self.harness.evaluate_status()
         self.assertEqual(
             self.harness.model.unit.status,
@@ -35,64 +39,59 @@ class TestCharm(unittest.TestCase):
         )
 
     def test_given_email_is_invalid_when_config_changed_then_status_is_blocked(self):
-        self.harness.set_can_connect("lego", True)
-        self.harness.update_config(
+        id = self.create_and_grant_plugin_config_secret(
             {
-                "email": "invalid-email",
-                "aws_access_key_id": "dummy key",
-                "aws_secret_access_key": "dummy access key",
-                "aws_region": "dummy region",
-                "aws_hosted_zone_id": "dummy zone id",
+                "aws-access-key-id": "dummy key",
+                "aws-secret-access-key": "dummy access key",
+                "aws-region": "dummy region",
+                "aws-hosted-zone-id": "dummy zone id",
             }
         )
+        self.harness.update_config({"email": "invalid-email", "route53-plugin-secret": id})
         self.harness.evaluate_status()
-        self.assertEqual(self.harness.model.unit.status, BlockedStatus("Invalid email address"))
+        self.assertEqual(self.harness.model.unit.status, BlockedStatus("invalid email address"))
 
     @parameterized.expand(
         [
             (
                 "AWS_ACCESS_KEY_ID",
                 {
-                    "email": "example@email.com",
-                    "aws_secret_access_key": "dummy access key",
-                    "aws_region": "dummy region",
-                    "aws_hosted_zone_id": "dummy zone id",
+                    "aws-secret-access-key": "dummy access key",
+                    "aws-region": "dummy region",
+                    "aws-hosted-zone-id": "dummy zone id",
                 },
             ),
             (
                 "AWS_SECRET_ACCESS_KEY",
                 {
-                    "email": "example@email.com",
-                    "aws_access_key_id": "dummy key",
-                    "aws_region": "dummy region",
-                    "aws_hosted_zone_id": "dummy zone id",
+                    "aws-access-key-id": "dummy key",
+                    "aws-region": "dummy region",
+                    "aws-hosted-zone-id": "dummy zone id",
                 },
             ),
             (
                 "AWS_REGION",
                 {
-                    "email": "example@email.com",
-                    "aws_access_key_id": "dummy key",
-                    "aws_secret_access_key": "dummy access key",
-                    "aws_hosted_zone_id": "dummy zone id",
+                    "aws-access-key-id": "dummy key",
+                    "aws-secret-access-key": "dummy access key",
+                    "aws-hosted-zone-id": "dummy zone id",
                 },
             ),
             (
                 "AWS_HOSTED_ZONE_ID",
                 {
-                    "email": "example@email.com",
-                    "aws_access_key_id": "dummy key",
-                    "aws_secret_access_key": "dummy access key",
-                    "aws_region": "dummy region",
+                    "aws-access-key-id": "dummy key",
+                    "aws-secret-access-key": "dummy access key",
+                    "aws-region": "dummy region",
                 },
             ),
         ]
     )
     def test_given_credentials_missing_when_config_changed_then_status_is_blocked(
-        self, option, config
+        self, option, secret_content
     ):
-        self.harness.set_can_connect("lego", True)
-        self.harness.update_config(config)
+        id = self.create_and_grant_plugin_config_secret(secret_content)
+        self.harness.update_config({"email": "invalid-email", "route53-plugin-secret": id})
         self.harness.evaluate_status()
         self.assertEqual(
             self.harness.model.unit.status,
