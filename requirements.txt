@@ -6,6 +6,9 @@
 #
 annotated-types==0.7.0
     # via pydantic
+attrs==24.2.0
+    # via
+    #   referencing
 cffi==1.16.0
     # via cryptography
 cosl==0.0.22
@@ -24,14 +27,16 @@ pydantic==2.8.2
     #   cosl
 pydantic-core==2.20.1
     # via pydantic
-pylego==0.1.2
+pylego==0.1.5
     # via -r requirements.in
 pyyaml==6.0.1
     # via
     #   cosl
     #   ops
 rpds-py==0.18.0
-    # via -r requirements.in
+    # via
+    #   -r requirements.in
+    #   referencing
 typing-extensions==4.10.0
     # via
     #   cosl

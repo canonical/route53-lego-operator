@@ -33,17 +33,11 @@ class Route53LegoK8s(AcmeClient):
         Returns:
             str: Error message if any required config options are missing.
         """
-        required_fields = {
-            "AWS_REGION",
-            "AWS_HOSTED_ZONE_ID",
-            "AWS_ACCESS_KEY_ID",
-            "AWS_SECRET_ACCESS_KEY",
-        }
-        required_fields = plugin_config.keys()
+        existing_fields = plugin_config.keys()
         if missing_config := [
-            option for option in required_fields if option not in required_fields
+            option for option in self.REQUIRED_CONFIG if option not in existing_fields
         ]:
-            return f"The following config options must be set: {', '.join(missing_config)}"
+            return f"the following config options must be set: {', '.join(missing_config)}"
         return None
 
 

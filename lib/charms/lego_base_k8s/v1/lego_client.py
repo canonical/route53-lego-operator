@@ -21,9 +21,16 @@ charmcraft fetch-lib charms.loki_k8s.v1.loki_push_api
 ```
 
 You will also need to add the following library to the charm's `requirements.txt` file:
-- jsonschema
 - cryptography
 - cosl
+
+You will need to add the following to your metadata.yaml file:
+```yaml
+parts:
+  charm:
+    build-packages:
+      - golang-go
+```
 
 Then, to use the library in an example charm, you can do the following:
 ```python
@@ -37,7 +44,7 @@ class ExampleAcmeCharm(AcmeClient):
 
     def _validate_plugin_config(self, plugin_config: Dict[str, str]) -> str:
         if "NAMECHEAP_API_USER" not in plugin_config:
-            return "API user was not"
+            return "API user was not provided"
         if "NAMECHEAP_API_KEY" not in plugin_config:
             return "API key was not provided"
         return ""
@@ -49,31 +56,38 @@ Charms using this library are expected to:
 - Implement the `_validate_plugin_config` method,
   it should validate the plugin specific configuration,
   returning a string with an error message if the
-  plugin specific configuration is invalid, otherwise an empty string.
-- Specify a config option in the metadata.yaml file:
+  plugin specific configuration is invalid, or an empty string if it's valid.
+- Specify the following config options in the `metadata.yaml` file:
 ``yaml
 config:
   options:
-    <plugin>-config-secret:
+    email:
       type: string
-      description: The secret ID that contains the options for the plugin.
-- Create a secret that contains all of the required parameters for the plugin.
-- Grant this secret to the charm and store the secret id in the previously defined config option.
-- Specify a `certificates` integration in their
-  `metadata.yaml` file:
+      description: Account email address to receive notifications from Let's Encrypt.
+    server:
+      type: string
+      description: Certificate authority server
+      default: "https://acme-v02.api.letsencrypt.org/directory"
+    route53-config-secret:
+      type: string
+      description: The secret id of the secret that contains all of the configuration options required to get a certificate.
+- Specify at least the following integrations in their `metadata.yaml` file:
 ```yaml
 provides:
   certificates:
     interface: tls-certificates
   send-ca-cert:
     interface: certificate_transfer
-```
-- Specify a `logging` integration in their `metadata.yaml` file:
-```yaml
 requires:
   logging:
     interface: loki_push_api
 ```
+
+When using the charm, the user is expected to:
+- Pass in an email and an ACME server as config options
+- Create a secret that contains all of the required parameters for the plugin.
+- Grant this secret to the charm.
+- Pass in the secret id that was generated as a config option.
 """
 
 import abc
@@ -81,7 +95,8 @@ import logging
 import os
 import re
 from abc import abstractmethod
-from typing import Dict, Set
+from contextlib import contextmanager
+from typing import Dict
 from urllib.parse import urlparse
 
 from charms.certificate_transfer_interface.v1.certificate_transfer import (
@@ -97,7 +112,7 @@ from charms.tls_certificates_interface.v4.tls_certificates import (
 from ops import ModelError, Secret, SecretNotFoundError
 from ops.charm import CharmBase, CollectStatusEvent
 from ops.framework import EventBase
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from pylego.pylego import LEGOError, run_lego_command
 
 # The unique Charmhub library identifier, never change it
@@ -136,6 +151,7 @@ class AcmeClient(CharmBase):
             for event in [
                 self.on[CA_TRANSFER_RELATION_NAME].relation_joined,
                 self.on[CERTIFICATES_RELATION_NAME].relation_changed,
+                self.on.secret_changed,
                 self.on.config_changed,
                 self.on.update_status,
             ]
@@ -146,75 +162,66 @@ class AcmeClient(CharmBase):
 
     def _on_collect_status(self, event: CollectStatusEvent) -> None:
         """Handle the collect status event."""
-        if err := self.validate_generic_acme_config():
+        if not self.unit.is_leader():
+            event.add_status(BlockedStatus("only 1 leader unit can operate at any given time"))
+            return
+        if err := self._validate_charm_config_options():
             event.add_status(BlockedStatus(err))
             return
-        if not self._plugin_config:
-            event.add_status(BlockedStatus("plugin config secret invalid or not found"))
-            return
-        if err := self._validate_plugin_config(self._plugin_config):
+        if err := self._validate_plugin_config_options(self._plugin_config):
             event.add_status(BlockedStatus(err))
             return
         event.add_status(ActiveStatus(self._get_certificate_fulfillment_status()))
 
     def _configure(self, event: EventBase) -> None:
-        """Configure the Lego provider.
+        """Configure the Lego provider."""
+        if not self.unit.is_leader():
+            logger.error("only the leader unit can handle certificate requests")
+            return
+        if err := self._validate_charm_config_options():
+            logger.error(err)
+            return
+        if err := self._validate_plugin_config_options(self._plugin_config):
+            logger.error(err)
+            return
+        self._configure_certificates()
+        self._configure_ca_certificates()
 
-        Validate configs.
-        Go through all the certificates relations and handle outstanding requests.
-        Go Through all certificate transfer relations and share the CA certificates.
-        """
-        if err := self.validate_generic_acme_config():
-            logger.error(err)
-            return
-        if err := self._validate_plugin_config(self._plugin_config):
-            logger.error(err)
-            return
-        outstanding_requests = self.tls_certificates.get_outstanding_certificate_requests()
-        for request in outstanding_requests:
-            self._generate_signed_certificate(
-                csr=request.certificate_signing_request,
-                relation_id=request.relation_id,
+    def _configure_certificates(self):
+        """Attempt to fulfill all certificate requests."""
+        certificate_requests = self.tls_certificates.get_certificate_requests()
+        provided_certificates = self.tls_certificates.get_provider_certificates()
+        certificate_pair_map = {
+            csr: list(
+                filter(
+                    lambda x: x.relation_id == csr.relation_id
+                    and x.certificate_signing_request.raw == csr.certificate_signing_request.raw,
+                    provided_certificates,
+                )
             )
+            for csr in certificate_requests
+        }
+        with self.maintenance_status("processing certificate requests"):
+            for certificate_request, assigned_certificates in certificate_pair_map.items():
+                if not assigned_certificates:
+                    self._generate_signed_certificate(
+                        csr=certificate_request.certificate_signing_request,
+                        relation_id=certificate_request.relation_id,
+                    )
+
+    def _configure_ca_certificates(self):
+        """Distribute all used CA certificates to requirers."""
         if len(self.model.relations.get(CA_TRANSFER_RELATION_NAME, [])) > 0:
-            self.cert_transfer.add_certificates(self._get_issuing_ca_certificates())
-
-    @abstractmethod
-    def _validate_plugin_config(self, plugin_config: Dict[str, str]) -> str:
-        """Validate plugin specific configuration.
-
-        Implementations need to validate the plugin
-        specific configuration that is received as the
-        first argument of the function and return either
-        an empty string if valid or the error message if invalid.
-
-        Returns:
-            str: Error message if invalid, otherwise an empty string.
-        """
-        pass
-
-    def validate_generic_acme_config(self) -> str:
-        """Validate generic ACME config.
-
-        Returns:
-        str: Error message if invalid, otherwise an empty string.
-        """
-        if not self._email:
-            return "Email address was not provided"
-        if not self._server:
-            return "ACME server was not provided"
-        if not _email_is_valid(self._email):
-            return "Invalid email address"
-        if not _server_is_valid(self._server):
-            return "Invalid ACME server"
-        return ""
+            self.cert_transfer.add_certificates(
+                {
+                    str(provider_certificate.ca)
+                    for provider_certificate in self.tls_certificates.get_provider_certificates()
+                }
+            )
 
     def _generate_signed_certificate(self, csr: CertificateSigningRequest, relation_id: int):
         """Generate signed certificate from the ACME provider."""
-        if not self.unit.is_leader():
-            logger.debug("Only the leader can handle certificate requests")
-            return
-        logger.info("Received Certificate Creation Request for domain %s", csr.common_name)
+        logger.info("generating certificate for domain %s", csr.common_name)
         try:
             response = run_lego_command(
                 email=self._email,
@@ -243,13 +250,6 @@ class AcmeClient(CharmBase):
             ),
         )
 
-    def _get_issuing_ca_certificates(self) -> Set[str]:
-        """Get a list of the CA certificates that have been used with the issued certs."""
-        return {
-            str(provider_certificate.ca)
-            for provider_certificate in self.tls_certificates.get_provider_certificates()
-        }
-
     def _get_certificate_fulfillment_status(self) -> str:
         """Return the status message reflecting how many certificate requests are still pending."""
         outstanding_requests_num = len(
@@ -257,7 +257,56 @@ class AcmeClient(CharmBase):
         )
         total_requests_num = len(self.tls_certificates.get_certificate_requests())
         fulfilled_certs = total_requests_num - outstanding_requests_num
-        return f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
+        message = f"{fulfilled_certs}/{total_requests_num} certificate requests are fulfilled"
+        if fulfilled_certs != total_requests_num:
+            message += ". please monitor logs for any errors"
+        return message
+
+    @abstractmethod
+    def _validate_plugin_config_options(self, plugin_config: Dict[str, str]) -> str:
+        """Validate plugin specific configuration.
+
+        Implementations need to validate the plugin
+        specific configuration that is received as the
+        first argument of the function and return either
+        an empty string if valid or the error message if invalid.
+
+        Args:
+            plugin_config: A dictionary that comes from a juju secret that will
+                be passed to the lego runner.
+
+        Returns:
+            str: Error message if invalid, otherwise an empty string.
+        """
+        pass
+
+    def _validate_charm_config_options(self) -> str:
+        """Validate generic ACME config.
+
+        Returns:
+        str: Error message if invalid, otherwise an empty string.
+        """
+        if not self._email:
+            return "email address was not provided"
+        if not self._plugin_config:
+            return "plugin configuration secret was not provided"
+        if not _email_is_valid(self._email):
+            return "invalid email address"
+        if not _server_is_valid(self._server):
+            return "invalid ACME server"
+        return ""
+
+    @contextmanager
+    def maintenance_status(self, message: str):
+        """Context manager to set the charm status temporarily.
+
+        Useful around long-running operations to indicate that the charm is
+        busy.
+        """
+        previous_status = self.unit.status
+        self.unit.status = MaintenanceStatus(message)
+        yield
+        self.unit.status = previous_status
 
     @property
     def _app_environment(self) -> Dict[str, str]:
@@ -276,8 +325,17 @@ class AcmeClient(CharmBase):
     def _plugin_config(self) -> Dict[str, str]:
         """Plugin specific additional configuration for the command.
 
-        Implement this method in your charm to return a dictionary with the plugin specific
-        configuration.
+        Will attempt to access the juju secret named <plugin_name>-config-secret,
+        convert lowercase, kebab-style to uppercase, snake_case, and return all of them
+        as a dictionary. Ex:
+
+        namecheap-api-key: "APIKEY1"
+        namecheap-api-user: "USER"
+
+        will become
+
+        NAMECHEAP_API_KEY: "APIKEY1"
+        NAMECHEAP_API_USER: "USER"
 
         Returns:
             Dict[str,str]: Plugin specific configuration.
@@ -286,11 +344,13 @@ class AcmeClient(CharmBase):
             plugin_config_secret_id = str(
                 self.model.config.get(f"{self._plugin}-config-secret", "")
             )
+            if not plugin_config_secret_id:
+                return {}
             plugin_config_secret: Secret = self.model.get_secret(id=plugin_config_secret_id)
             plugin_config = plugin_config_secret.get_content(refresh=True)
         except (SecretNotFoundError, ModelError):
             return {}
-        return plugin_config
+        return {key.upper().replace("-", "_"): value for key, value in plugin_config.items()}
 
     @property
     def _email(self) -> str | None:
