@@ -3,19 +3,19 @@
 #
 # Learn more about testing at: https://juju.is/docs/sdk/testing
 
-import unittest
-
+import pytest
 from charm import Route53LegoK8s
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
-from parameterized import parameterized
 
 
-class TestCharm(unittest.TestCase):
+class TestCharm:
+    @pytest.fixture(autouse=True)
     def setUp(self):
         self.harness = Harness(Route53LegoK8s)
-        self.addCleanup(self.harness.cleanup)
         self.harness.begin()
+        yield
+        self.harness.cleanup()
 
     def create_and_grant_plugin_config_secret(self, content: dict[str, str]):
         id = self.harness.add_user_secret(content)
@@ -23,6 +23,7 @@ class TestCharm(unittest.TestCase):
         return id
 
     def test_given_email_is_valid_when_config_changed_then_status_is_active(self):
+        self.harness.set_leader()
         id = self.create_and_grant_plugin_config_secret(
             {
                 "aws-access-key-id": "dummy key",
@@ -31,14 +32,14 @@ class TestCharm(unittest.TestCase):
                 "aws-hosted-zone-id": "dummy zone id",
             }
         )
-        self.harness.update_config({"email": "example@email.com", "route53-plugin-secret": id})
+        self.harness.update_config({"email": "example@email.com", "route53-config-secret": id})
         self.harness.evaluate_status()
-        self.assertEqual(
-            self.harness.model.unit.status,
-            ActiveStatus("0/0 certificate requests are fulfilled"),
+        assert self.harness.model.unit.status == ActiveStatus(
+            "0/0 certificate requests are fulfilled"
         )
 
     def test_given_email_is_invalid_when_config_changed_then_status_is_blocked(self):
+        self.harness.set_leader()
         id = self.create_and_grant_plugin_config_secret(
             {
                 "aws-access-key-id": "dummy key",
@@ -47,11 +48,12 @@ class TestCharm(unittest.TestCase):
                 "aws-hosted-zone-id": "dummy zone id",
             }
         )
-        self.harness.update_config({"email": "invalid-email", "route53-plugin-secret": id})
+        self.harness.update_config({"email": "invalid-email", "route53-config-secret": id})
         self.harness.evaluate_status()
-        self.assertEqual(self.harness.model.unit.status, BlockedStatus("invalid email address"))
+        assert self.harness.model.unit.status == BlockedStatus("invalid email address")
 
-    @parameterized.expand(
+    @pytest.mark.parametrize(
+        "missing_option,secret_content",
         [
             (
                 "AWS_ACCESS_KEY_ID",
@@ -85,15 +87,15 @@ class TestCharm(unittest.TestCase):
                     "aws-region": "dummy region",
                 },
             ),
-        ]
+        ],
     )
     def test_given_credentials_missing_when_config_changed_then_status_is_blocked(
-        self, option, secret_content
+        self, missing_option, secret_content
     ):
+        self.harness.set_leader()
         id = self.create_and_grant_plugin_config_secret(secret_content)
-        self.harness.update_config({"email": "invalid-email", "route53-plugin-secret": id})
+        self.harness.update_config({"email": "example@email.com", "route53-config-secret": id})
         self.harness.evaluate_status()
-        self.assertEqual(
-            self.harness.model.unit.status,
-            BlockedStatus(f"The following config options must be set: {option}"),
+        assert self.harness.model.unit.status == BlockedStatus(
+            f"the following config options must be set: {missing_option}"
         )

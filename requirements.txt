@@ -16,8 +16,6 @@ ops==2.15.0
     # via
     #   -r requirements.in
     #   cosl
-parametrized==66.0.3
-    # via -r requirements.in
 pycparser==2.21
     # via cffi
 pydantic==2.8.2

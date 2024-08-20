@@ -1,6 +1,5 @@
 ops
 cryptography
-parametrized
 cosl
 pylego
 pydantic
