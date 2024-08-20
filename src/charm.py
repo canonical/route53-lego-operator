@@ -27,7 +27,7 @@ class Route53LegoK8s(AcmeClient):
         """Use the lego_client library to manage events."""
         super().__init__(*args, plugin="route53")
 
-    def _validate_plugin_config_options(self, plugin_config: Dict[str, str]) -> str | None:
+    def _validate_plugin_config_options(self, plugin_config: Dict[str, str]) -> str:
         """Check whether required config options are set.
 
         Returns:
@@ -39,7 +39,7 @@ class Route53LegoK8s(AcmeClient):
             option for option in self.REQUIRED_CONFIG if option not in existing_fields
         ]:
             return f"the following config options must be set: {', '.join(missing_config)}"
-        return None
+        return ""
 
 
 if __name__ == "__main__":  # pragma: nocover
