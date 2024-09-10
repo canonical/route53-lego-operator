@@ -5,10 +5,11 @@
 
 import unittest
 
-from charm import Route53LegoK8s
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 from parameterized import parameterized
+
+from charm import Route53LegoK8s
 
 
 class TestCharm(unittest.TestCase):
