@@ -90,7 +90,7 @@ class TestCharm(unittest.TestCase):
         ]
     )
     def test_given_credentials_missing_when_config_changed_then_status_is_blocked(
-        self, option, config
+        self, option: str, config: dict[str, str]
     ):
         self.harness.set_can_connect("lego", True)
         self.harness.update_config(config)
