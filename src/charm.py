@@ -5,7 +5,7 @@
 """Retrieves certificates from an ACME server using the AWS Route53 dns provider."""
 
 import logging
-from typing import Dict
+from typing import Any, Dict
 
 from charms.lego_base_k8s.v0.lego_client import AcmeClient
 from ops.main import main
@@ -23,7 +23,7 @@ class Route53LegoK8s(AcmeClient):
         "AWS_SECRET_ACCESS_KEY",
     ]
 
-    def __init__(self, *args):
+    def __init__(self, *args: Any):
         """Use the lego_client library to manage events."""
         super().__init__(*args, plugin="route53")
 

@@ -31,11 +31,11 @@ async def deploy_grafana_agent(ops_test: OpsTest):
 
 @pytest.fixture(scope="module")
 @pytest.mark.abort_on_fail
-async def deploy(ops_test: OpsTest, request):
+async def deploy(ops_test: OpsTest, request: pytest.FixtureRequest):
     """Deploy the charm-under-test."""
     resources = {"lego-image": METADATA["resources"]["lego-image"]["upstream-source"]}
     assert ops_test.model
-    charm = Path(request.config.getoption("--charm_path")).resolve()
+    charm = Path(str(request.config.getoption("--charm_path"))).resolve()
     await ops_test.model.deploy(
         charm,
         resources=resources,
@@ -59,7 +59,7 @@ async def deploy(ops_test: OpsTest, request):
 @pytest.mark.abort_on_fail
 async def test_given_charm_is_built_when_deployed_then_status_is_active(
     ops_test: OpsTest,
-    deploy,
+    deploy: None,
 ):
     assert ops_test.model
     await ops_test.model.wait_for_idle(
@@ -71,7 +71,7 @@ async def test_given_charm_is_built_when_deployed_then_status_is_active(
 
 async def test_given_tls_requirer_is_deployed_and_related_then_status_is_active(
     ops_test: OpsTest,
-    deploy,
+    deploy: None,
 ):
     assert ops_test.model
     await ops_test.model.integrate(
@@ -86,7 +86,7 @@ async def test_given_tls_requirer_is_deployed_and_related_then_status_is_active(
 
 async def test_given_grafana_agent_when_integrate_then_status_is_active(
     ops_test: OpsTest,
-    deploy,
+    deploy: None,
 ):
     await deploy_grafana_agent(ops_test)
     assert ops_test.model
